@@ -6,7 +6,18 @@
     <description>Recent content on ri52dksla blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>ja-jp</language>
-    <lastBuildDate>Sun, 10 Jan 2021 11:57:15 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 10 Jan 2021 12:30:03 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Dataformでmultiline stringを使いたい</title>
+      <link>https://blog.ri52dksla.dev/posts/dataform-multiline-string/</link>
+      <pubDate>Sun, 10 Jan 2021 12:30:03 +0900</pubDate>
+      
+      <guid>https://blog.ri52dksla.dev/posts/dataform-multiline-string/</guid>
+      <description>例えばTerraformでBigQueryのTableを作る場合には、以下のようにHeredocを使って記述することができます。 これと同じようなことをDataformでも行いたいです。
+resource &amp;#34;google_bigquery_table&amp;#34; &amp;#34;example&amp;#34; { ... description = &amp;lt;&amp;lt;EOSこのテーブルはmultiline stringの例のために作られました。 Link - https://example.com EOS } Dataformではbacktickを使うことでmultiline stringを実現することができます。
+config { type: &amp;#34;table&amp;#34;, schema: &amp;#34;dataform_tutorial&amp;#34;, name: &amp;#34;order_stats&amp;#34;, description: ` This table joins orders information from Shopify &amp;amp; payment information from Stripe Links: - https://example.com `, bigquery: { labels: { &amp;#34;test&amp;#34;: &amp;#34;hello&amp;#34;, &amp;#34;hello&amp;#34;: &amp;#34;world&amp;#34;, &amp;#34;hello_1&amp;#34;: &amp;#34;world_1&amp;#34;, &amp;#34;hello-2&amp;#34;:&amp;#34;world-2&amp;#34; }, partitionBy: &amp;#34;order_date&amp;#34;, }, columns: { order_date: { description: ` The date when a customer placed their order see link for details https://example.</description>
+    </item>
+    
     <item>
       <title>DataformのCompile結果をConftestを使ってテストする</title>
       <link>https://blog.ri52dksla.dev/posts/dataform-conftest/</link>
