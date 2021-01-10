@@ -6,7 +6,22 @@
     <description>Recent content on ri52dksla blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>ja-jp</language>
-    <lastBuildDate>Fri, 01 Jan 2021 17:15:38 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 10 Jan 2021 11:57:15 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>DataformのCompile結果をConftestを使ってテストする</title>
+      <link>https://blog.ri52dksla.dev/posts/dataform-conftest/</link>
+      <pubDate>Sun, 10 Jan 2021 11:57:15 +0900</pubDate>
+      
+      <guid>https://blog.ri52dksla.dev/posts/dataform-conftest/</guid>
+      <description>DataformのCompile結果をRegoで書いたポリシーをもとに、Conftestを使ってテストしてみたいと思います。
+Dataformでは、複数のDWHをサポートしていますが、今回の例ではBigQueryを使用します。
+Dataformとは DataformはGoogle Cloudによって買収され、無料で使えるようになった「データパイプラインの作成」や「データ パイプラインのデプロイ」、「データ品質の確保」に使えるサービスです。(https://cloud.google.com/blog/ja/products/data-analytics/welcoming-dataform-to-bigquery)
+Dataformについてはすでにいくつか記事が書かれていますし、公式のドキュメントもわかりやすいのでここでは説明しません。
+この記事に関しては、DataformではSQLXという形式で、TableやView, DataのAssertionを記述することができるということがわかれば問題ないかなと思います。
+たとえば以下のorder_stats.sqlxというファイルをもとにしてBigQueryのテーブルを作成することができます。 このorder_stats.sqlxDataformの公式のドキュメントからコピーしてきました。
+-- example_project/definitions/order_stats.sqlx  -- copy from https://docs.dataform.co/getting-started-tutorial/testing-and-documentation config { type: &amp;#34;table&amp;#34;, description: &amp;#34;This table joins orders information from Shopify &amp;amp; payment information from Stripe&amp;#34;, columns: { order_date: &amp;#34;The date when a customer placed their order&amp;#34;, id: &amp;#34;Order ID as defined by Shopify&amp;#34;, order_status: &amp;#34;The status of an order e.g. sent, delivered&amp;#34;, customer_id: &amp;#34;Unique customer ID&amp;#34;, payment_status: &amp;#34;The status of a payment e.</description>
+    </item>
+    
     <item>
       <title>Hello World</title>
       <link>https://blog.ri52dksla.dev/posts/hello-world/</link>

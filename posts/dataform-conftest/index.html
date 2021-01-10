@@ -1,0 +1,446 @@
+
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content=""><title>DataformのCompile結果をConftestを使ってテストする - ri52dksla blog</title>
+
+<meta property="og:url" content="https://blog.ri52dksla.dev/posts/dataform-conftest/"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="DataformのCompile結果をConftestを使ってテストする - ri52dksla blog"/>
+<meta property="og:site_name" content="ri52dksla blog"/>
+<meta property="og:description" content=""/>
+<meta property="og:locale" content="ja_JP"/>
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@ri52dksla">
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-139351838-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+<link rel="stylesheet" href="/stylesheets/style.min.css" type="text/css">
+</head>
+  <body><div id="header">
+  <a href="/" id="header-name">ri52dksla blog</a>
+</div>
+
+    <div id="container">
+    
+<article id="post">
+  <header>
+    <div>
+      <h1 id="post-title">DataformのCompile結果をConftestを使ってテストする</h1>
+      <aside id="post-meta">
+        <div>
+        <time datetime="2021-01-10">2021-01-10</time>
+        </div>
+      </aside>
+    </div>  
+  </header>
+  <section id="post-content">
+    <div>
+      <p><code>Dataform</code>のCompile結果を<code>Rego</code>で書いたポリシーをもとに、<code>Conftest</code>を使ってテストしてみたいと思います。</p>
+<p>Dataformでは、複数のDWHをサポートしていますが、今回の例ではBigQueryを使用します。</p>
+<h2 id="dataformとは">Dataformとは</h2>
+<p>Dataformは<code>Google Cloud</code>によって買収され、無料で使えるようになった「データパイプラインの作成」や「データ パイプラインのデプロイ」、「データ品質の確保」に使えるサービスです。(<a href="https://cloud.google.com/blog/ja/products/data-analytics/welcoming-dataform-to-bigquery">https://cloud.google.com/blog/ja/products/data-analytics/welcoming-dataform-to-bigquery</a>)</p>
+<p>Dataformについてはすでにいくつか記事が書かれていますし、公式のドキュメントもわかりやすいのでここでは説明しません。</p>
+<p>この記事に関しては、Dataformでは<a href="https://docs.dataform.co/guides/sqlx">SQLX</a>という形式で、TableやView, DataのAssertionを記述することができるということがわかれば問題ないかなと思います。</p>
+<p>たとえば以下の<code>order_stats.sqlx</code>というファイルをもとにしてBigQueryのテーブルを作成することができます。
+この<code>order_stats.sqlx</code>Dataformの公式の<a href="https://docs.dataform.co/getting-started-tutorial/building-your-data-model">ドキュメント</a>からコピーしてきました。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- example_project/definitions/order_stats.sqlx
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">-- copy from https://docs.dataform.co/getting-started-tutorial/testing-and-documentation
+</span><span style="color:#75715e"></span>config <span style="color:#960050;background-color:#1e0010">{</span>
+  <span style="color:#66d9ef">type</span>: <span style="color:#e6db74">&#34;table&#34;</span>,
+    description: <span style="color:#e6db74">&#34;This table joins orders information from Shopify &amp; payment information from Stripe&#34;</span>,
+  columns: <span style="color:#960050;background-color:#1e0010">{</span>
+    order_date: <span style="color:#e6db74">&#34;The date when a customer placed their order&#34;</span>,
+    id: <span style="color:#e6db74">&#34;Order ID as defined by Shopify&#34;</span>,
+    order_status: <span style="color:#e6db74">&#34;The status of an order e.g. sent, delivered&#34;</span>,
+    customer_id: <span style="color:#e6db74">&#34;Unique customer ID&#34;</span>,
+    payment_status: <span style="color:#e6db74">&#34;The status of a payment e.g. pending, paid&#34;</span>,
+    payment_method: <span style="color:#e6db74">&#34;How the customer chose to pay&#34;</span>,
+    item_count: <span style="color:#e6db74">&#34;The number of items the customer ordered&#34;</span>,
+    amount: <span style="color:#e6db74">&#34;The amount the customer paid&#34;</span>
+  <span style="color:#960050;background-color:#1e0010">}</span>,
+    assertions: <span style="color:#960050;background-color:#1e0010">{</span>
+    uniqueKey: [<span style="color:#e6db74">&#34;id&#34;</span>]
+  <span style="color:#960050;background-color:#1e0010">}</span>
+<span style="color:#960050;background-color:#1e0010">}</span>
+
+<span style="color:#75715e">-- copy from https://docs.dataform.co/getting-started-tutorial/building-your-data-model
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span>
+  orders.date <span style="color:#66d9ef">AS</span> order_date,
+  orders.id <span style="color:#66d9ef">AS</span> id,
+  orders.customer_id <span style="color:#66d9ef">AS</span> customer_id,
+  orders.status <span style="color:#66d9ef">AS</span> order_status,
+  charges.status <span style="color:#66d9ef">AS</span> payment_status,
+  charges.payment_method <span style="color:#66d9ef">AS</span> payment_method,
+  <span style="color:#66d9ef">SUM</span>(orders.item_count) <span style="color:#66d9ef">AS</span> item_count,
+  <span style="color:#66d9ef">SUM</span>(charges.amount) <span style="color:#66d9ef">AS</span> amount
+
+<span style="color:#66d9ef">FROM</span>
+  dataform<span style="color:#f92672">-</span>demos.dataform_tutorial.shopify_orders <span style="color:#66d9ef">AS</span> orders
+  <span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">JOIN</span> dataform<span style="color:#f92672">-</span>demos.dataform_tutorial.stripe_payments <span style="color:#66d9ef">AS</span> charges
+    <span style="color:#66d9ef">ON</span> orders.payment_id <span style="color:#f92672">=</span> charges.id
+
+<span style="color:#66d9ef">WHERE</span>
+  orders.id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">999</span>
+  <span style="color:#66d9ef">AND</span> orders.item_count <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+  <span style="color:#66d9ef">AND</span> orders.status <span style="color:#f92672">&lt;&gt;</span> <span style="color:#e6db74">&#39;internal&#39;</span>
+  <span style="color:#66d9ef">AND</span> charges.payment_method <span style="color:#66d9ef">IN</span> (<span style="color:#e6db74">&#39;debit_card&#39;</span>, <span style="color:#e6db74">&#39;subscription&#39;</span>, <span style="color:#e6db74">&#39;coupon&#39;</span>)
+
+<span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">6</span>
+</code></pre></div><p>これは、Dataformの公式の<a href="https://docs.dataform.co/getting-started-tutorial/building-your-data-model">ドキュメント</a>からコピーしてきたものですが、これをもとにしてBigQuery Tableが作成されます。
+<code>config</code>の部分には<code>description</code>や<code>columns</code>、<code>tags</code>、DWHごとの設定などを記述することができます。
+詳細については公式の<a href="https://docs.dataform.co/reference#ITableConfig">ドキュメント</a>を参照してください。</p>
+<p>今回でいうとクエリよりも<code>config</code>の部分が大事です。</p>
+<h2 id="conftestとは">Conftestとは</h2>
+<p><a href="https://www.conftest.dev/">Conftest</a>は、<code>Rego</code>という言語を使って記述したポリシーをもとにYAMLやJSONなどの形式のファイルに対してテストを行うツールです。<br>
+<code>Kubernetes</code>のマニフェストの検証に使っているのを目にすることがありますが、それ以外でもYAMLやJSONなどの形式のファイルであればテストを行えます。</p>
+<h2 id="やりたいこと">やりたいこと</h2>
+<p><code>SQLX</code>で記述されたTableやViewの設定に対して、それがポリシーに沿っているかをテストしたい。
+テストできることによって、例えばdescriptionを必須とすることで作成されるテーブルが何なのかをわかりやすくする、適切でない設定をCIで検知するなどに、使えるかなと思います。</p>
+<p>ポリシーは<code>Rego</code>を使って記述し、<code>Conftest</code>を使ってテストします。テストの対象は<code>Dataform</code>のCompile結果とします。</p>
+<h2 id="dataformのcompile結果">DataformのCompile結果</h2>
+<p><code>dataform</code>のCLIには<code>dataform compile</code>というコマンドがあります。 (<a href="https://docs.dataform.co/dataform-cli#compile-your-code">https://docs.dataform.co/dataform-cli#compile-your-code</a>)
+このコマンドを実行するとどういったテーブルが作成されるかなどが表示されます。
+また<code>--json</code>オプションを指定することで、結果をJSON形式で出力することができます。</p>
+<p>例えば、上の<code>order_stats.sqlx</code>が含まれた状態で<code>dataform compile</code>を実行してみると以下のような出力が得られます。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dataform compile example_project/
+Compiling...
+
+Compiled <span style="color:#ae81ff">1</span> action<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span>.
+<span style="color:#ae81ff">1</span> dataset<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span>:
+  dataform.order_stats <span style="color:#f92672">[</span>table<span style="color:#f92672">]</span>
+</code></pre></div><p>JSON形式の場合には以下のような出力が得られます。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+    <span style="color:#f92672">&#34;tables&#34;</span>: [
+        {
+            <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345.dataform.order_stats&#34;</span>,
+            <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;table&#34;</span>,
+            <span style="color:#f92672">&#34;target&#34;</span>: {
+                <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform&#34;</span>,
+                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;order_stats&#34;</span>,
+                <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+            },
+            <span style="color:#f92672">&#34;query&#34;</span>: <span style="color:#e6db74">&#34;-- order_stats.sqlx\n\n-- copy from https://docs.dataform.co/getting-started-tutorial/testing-and-documentation\n\n\n-- copy from https://docs.dataform.co/getting-started-tutorial/building-your-data-model\nSELECT\n  orders.date AS order_date,\n  orders.id AS id,\n  orders.customer_id AS customer_id,\n  orders.status AS order_status,\n  charges.status AS payment_status,\n  charges.payment_method AS payment_method,\n  SUM(orders.item_count) AS item_count,\n  SUM(charges.amount) AS amount\n\nFROM\n  dataform-demos.dataform_tutorial.shopify_orders AS orders\n  LEFT JOIN dataform-demos.dataform_tutorial.stripe_payments AS charges\n    ON orders.payment_id = charges.id\n\nWHERE\n  orders.id &lt;= 999\n  AND orders.item_count &gt; 0\n  AND orders.status &lt;&gt; &#39;internal&#39;\n  AND charges.payment_method IN (&#39;debit_card&#39;, &#39;subscription&#39;, &#39;coupon&#39;)\n\nGROUP BY 1, 2, 3, 4, 5, 6&#34;</span>,
+            <span style="color:#f92672">&#34;disabled&#34;</span>: <span style="color:#66d9ef">false</span>,
+            <span style="color:#f92672">&#34;fileName&#34;</span>: <span style="color:#e6db74">&#34;definitions/order_stats.sqlx&#34;</span>,
+            <span style="color:#f92672">&#34;actionDescriptor&#34;</span>: {
+                <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;This table joins orders information from Shopify &amp; payment information from Stripe&#34;</span>,
+                <span style="color:#f92672">&#34;columns&#34;</span>: [
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;The date when a customer placed their order&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;order_date&#34;</span>
+                        ]
+                    },
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;Order ID as defined by Shopify&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;id&#34;</span>
+                        ]
+                    },
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;The status of an order e.g. sent, delivered&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;order_status&#34;</span>
+                        ]
+                    },
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;Unique customer ID&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;customer_id&#34;</span>
+                        ]
+                    },
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;The status of a payment e.g. pending, paid&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;payment_status&#34;</span>
+                        ]
+                    },
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;How the customer chose to pay&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;payment_method&#34;</span>
+                        ]
+                    },
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;The number of items the customer ordered&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;item_count&#34;</span>
+                        ]
+                    },
+                    {
+                        <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;The amount the customer paid&#34;</span>,
+                        <span style="color:#f92672">&#34;path&#34;</span>: [
+                            <span style="color:#e6db74">&#34;amount&#34;</span>
+                        ]
+                    }
+                ]
+            },
+            <span style="color:#f92672">&#34;canonicalTarget&#34;</span>: {
+                <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform&#34;</span>,
+                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;order_stats&#34;</span>,
+                <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+            }
+        }
+    ],
+    <span style="color:#f92672">&#34;assertions&#34;</span>: [
+        {
+            <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345.dataform_assertions.dataform_order_stats_assertions_uniqueKey_0&#34;</span>,
+            <span style="color:#f92672">&#34;dependencies&#34;</span>: [
+                <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345.dataform.order_stats&#34;</span>
+            ],
+            <span style="color:#f92672">&#34;query&#34;</span>: <span style="color:#e6db74">&#34;\nSELECT\n  *\nFROM (\n  SELECT\n    id,\n    COUNT(1) AS index_row_count\n  FROM `ri52dksla-dataform-conftest-example-12345.dataform.order_stats`\n  GROUP BY id\n  ) AS data\nWHERE index_row_count &gt; 1\n&#34;</span>,
+            <span style="color:#f92672">&#34;fileName&#34;</span>: <span style="color:#e6db74">&#34;definitions/order_stats.sqlx&#34;</span>,
+            <span style="color:#f92672">&#34;target&#34;</span>: {
+                <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform_assertions&#34;</span>,
+                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;dataform_order_stats_assertions_uniqueKey_0&#34;</span>,
+                <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+            },
+            <span style="color:#f92672">&#34;dependencyTargets&#34;</span>: [
+                {
+                    <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform&#34;</span>,
+                    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;order_stats&#34;</span>,
+                    <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+                }
+            ],
+            <span style="color:#f92672">&#34;canonicalTarget&#34;</span>: {
+                <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform_assertions&#34;</span>,
+                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;dataform_order_stats_assertions_uniqueKey_0&#34;</span>,
+                <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+            },
+            <span style="color:#f92672">&#34;parentAction&#34;</span>: {
+                <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform&#34;</span>,
+                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;order_stats&#34;</span>,
+                <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+            }
+        }
+    ],
+    <span style="color:#f92672">&#34;projectConfig&#34;</span>: {
+        <span style="color:#f92672">&#34;warehouse&#34;</span>: <span style="color:#e6db74">&#34;bigquery&#34;</span>,
+        <span style="color:#f92672">&#34;defaultSchema&#34;</span>: <span style="color:#e6db74">&#34;dataform&#34;</span>,
+        <span style="color:#f92672">&#34;assertionSchema&#34;</span>: <span style="color:#e6db74">&#34;dataform_assertions&#34;</span>,
+        <span style="color:#f92672">&#34;defaultDatabase&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>,
+        <span style="color:#f92672">&#34;useRunCache&#34;</span>: <span style="color:#66d9ef">false</span>
+    },
+    <span style="color:#f92672">&#34;graphErrors&#34;</span>: {},
+    <span style="color:#f92672">&#34;dataformCoreVersion&#34;</span>: <span style="color:#e6db74">&#34;1.17.2&#34;</span>,
+    <span style="color:#f92672">&#34;targets&#34;</span>: [
+        {
+            <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform&#34;</span>,
+            <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;order_stats&#34;</span>,
+            <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+        },
+        {
+            <span style="color:#f92672">&#34;schema&#34;</span>: <span style="color:#e6db74">&#34;dataform_assertions&#34;</span>,
+            <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;dataform_order_stats_assertions_uniqueKey_0&#34;</span>,
+            <span style="color:#f92672">&#34;database&#34;</span>: <span style="color:#e6db74">&#34;ri52dksla-dataform-conftest-example-12345&#34;</span>
+        }
+    ]
+}
+</code></pre></div><p>JSONでの出力は、<a href="https://docs.dataform.co/reference">API定義</a>の構造と対応しています。
+<code>Conftest</code>では、この出力をもとにポリシーを書くということになります。</p>
+<h3 id="dataform-compileコマンドは何をしているのか">dataform compileコマンドは何をしているのか?</h3>
+<p>ここはただの寄り道なので、飛ばしてしまって大丈夫です。</p>
+<p><code>dataform compile</code>コマンドは、まずDataformのプロジェクトをCompileし、その結果の<code>CompiledGraph</code>というものを整形して標準出力に書き込んでいるようです。
+<a href="https://github.com/dataform-co/dataform/blob/1.17.0/cli/index.ts#L345">https://github.com/dataform-co/dataform/blob/1.17.0/cli/index.ts#L345</a></p>
+<p><code>CompiledGraph</code>を整形し標準出力に書き込む処理は <a href="https://github.com/dataform-co/dataform/blob/1.17.0/cli/console.ts#L104">https://github.com/dataform-co/dataform/blob/1.17.0/cli/console.ts#L104</a> です。
+ここでの引数には、<code>ICompiledGraph</code>という型が指定されていますが、これは下のprotoファイルに定義されている<code>CompiledGraph</code>から生成されたものだと思います。(TypeScriptは殆ど使ったことがないので推測ですが)</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-typescript" data-lang="typescript"><span style="color:#66d9ef">export</span> <span style="color:#66d9ef">function</span> <span style="color:#a6e22e">printCompiledGraph</span>(<span style="color:#a6e22e">graph</span>: <span style="color:#66d9ef">dataform.ICompiledGraph</span>, <span style="color:#a6e22e">verbose</span>: <span style="color:#66d9ef">boolean</span>)
+</code></pre></div><p><code>CompiledGraph</code> はprotoファイルに定義されていて以下のような形式です。(<a href="https://github.com/dataform-co/dataform/blob/1.17.0/protos/core.proto#L397">https://github.com/dataform-co/dataform/blob/1.17.0/protos/core.proto#L397</a>)</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-proto" data-lang="proto"><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">CompiledGraph</span> {<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  ProjectConfig project_config <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">repeated</span> Table tables <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">repeated</span> Operation operations <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">repeated</span> Assertion assertions <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">repeated</span> Declaration declarations <span style="color:#f92672">=</span> <span style="color:#ae81ff">9</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">repeated</span> Test tests <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  GraphErrors graph_errors <span style="color:#f92672">=</span> <span style="color:#ae81ff">7</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> dataform_core_version <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">repeated</span> Target targets <span style="color:#f92672">=</span> <span style="color:#ae81ff">11</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>  reserved <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">6</span>;<span style="color:#960050;background-color:#1e0010">
+</span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></code></pre></div><h2 id="考えたポリシー">考えたポリシー</h2>
+<p>以下の3つをポリシーとして考えました。</p>
+<ul>
+<li>作成するTableには空文字でないdescriptionが書かれている</li>
+<li>作成するTableには特定のlabelが付与されている(<code>managed_by: dataform</code>)</li>
+<li>作成するTableにTagが付与される場合には<code>hourly</code>,<code>daily</code>,<code>weekly</code>のいずれかのTagが含まれている</li>
+</ul>
+<h2 id="regoで書いたポリシー">regoで書いたポリシー</h2>
+<p>記述方法についてはConftestの<a href="https://www.conftest.dev/">ドキュメント</a>やRego(Open Policy Agent)の<a href="https://www.openpolicyagent.org/docs/latest/policy-language/">ドキュメント</a>を参照してください。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-text" data-lang="text"># policy/example.rego
+
+package main
+
+# Tableにdescriptionが存在するか
+warn[msg] {
+    table := input.tables[_]
+    not table.actionDescriptor.description
+    msg := sprintf(&#34;table %s should has description&#34;, [table.fileName])
+}
+
+# Tableに空文字でないdescriptionが書かれているか
+warn[msg] {
+    table := input.tables[_]
+    table.actionDescriptor.description
+    count(table.actionDescriptor.description) == 0
+    msg := sprintf(&#34;table %s shoud have non empty description&#34;, [table.fileName])
+}
+
+# TableにBigQueryのLabelが存在するか
+warn[msg] {
+  table := input.tables[_]
+  not table.bigquery.labels
+  msg := sprintf(&#34;table %s should have BigQuery labels&#34;,[table.fileName])
+}
+
+# Tableに含まれるBigQueryのLabelの値に空文字のものが存在するか
+warn[msg] {
+  table := input.tables[_]
+  some label; count(table.bigquery.labels[label]) == 0
+  msg := sprintf(&#34;table %s should have nonempty value for BigQuery labels &#39;%s&#39;&#34;,[table.fileName, label])
+}
+
+# Tableに特定のLabelが付与されているか
+warn[msg] {
+  table := input.tables[_]
+  table.bigquery.labels
+  not table.bigquery.labels[&#34;managed_by&#34;] == &#34;dataform&#34;
+  msg := sprintf(&#34;table %s should have &#39;managed_by: dataform&#39; label &#34;,[table.fileName])
+}
+
+# 作成するTableにTagが付与される場合には,`hourly`,`daily`,`weekly`のいずれかのTagが含まれているか
+valid_tags = {&#34;hourly&#34;,&#34;daily&#34;,&#34;weekly&#34;}
+deny[msg] {
+    table := input.tables[_]
+    not count(cast_set(table.tags) &amp; valid_tags) == 1
+    msg := sprintf(&#34;table %s should have valid tag %s&#34;,[table.fileName, valid_tags])
+}
+</code></pre></div><h2 id="conftestを使ってテスト">Conftestを使ってテスト</h2>
+<p>以下の<code>SQLX</code>ファイルが含まれたプロジェクトをCompileした結果をテストしてみます。</p>
+<p>上の<code>order_stats.sqlx</code>を書き換えたものです。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- example_project/definitions/order_stats.sqlx
+</span><span style="color:#75715e"></span>
+config <span style="color:#960050;background-color:#1e0010">{</span>
+  <span style="color:#66d9ef">type</span>: <span style="color:#e6db74">&#34;table&#34;</span>,
+  tags: [<span style="color:#e6db74">&#34;example&#34;</span>],
+  bigquery: <span style="color:#960050;background-color:#1e0010">{</span>
+    labels: <span style="color:#960050;background-color:#1e0010">{</span>
+      <span style="color:#e6db74">&#34;hello&#34;</span>: <span style="color:#e6db74">&#34;world&#34;</span>,
+    <span style="color:#960050;background-color:#1e0010">}</span>,
+  <span style="color:#960050;background-color:#1e0010">}</span>,
+<span style="color:#960050;background-color:#1e0010">}</span>
+
+<span style="color:#75715e">-- copy from https://docs.dataform.co/getting-started-tutorial/building-your-data-model
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span>
+  orders.date <span style="color:#66d9ef">AS</span> order_date,
+  orders.id <span style="color:#66d9ef">AS</span> id,
+  orders.customer_id <span style="color:#66d9ef">AS</span> customer_id,
+  orders.status <span style="color:#66d9ef">AS</span> order_status,
+  charges.status <span style="color:#66d9ef">AS</span> payment_status,
+  charges.payment_method <span style="color:#66d9ef">AS</span> payment_method,
+  <span style="color:#66d9ef">SUM</span>(orders.item_count) <span style="color:#66d9ef">AS</span> item_count,
+  <span style="color:#66d9ef">SUM</span>(charges.amount) <span style="color:#66d9ef">AS</span> amount
+
+<span style="color:#66d9ef">FROM</span>
+  dataform<span style="color:#f92672">-</span>demos.dataform_tutorial.shopify_orders <span style="color:#66d9ef">AS</span> orders
+  <span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">JOIN</span> dataform<span style="color:#f92672">-</span>demos.dataform_tutorial.stripe_payments <span style="color:#66d9ef">AS</span> charges
+    <span style="color:#66d9ef">ON</span> orders.payment_id <span style="color:#f92672">=</span> charges.id
+
+<span style="color:#66d9ef">WHERE</span>
+  orders.id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">999</span>
+  <span style="color:#66d9ef">AND</span> orders.item_count <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+  <span style="color:#66d9ef">AND</span> orders.status <span style="color:#f92672">&lt;&gt;</span> <span style="color:#e6db74">&#39;internal&#39;</span>
+  <span style="color:#66d9ef">AND</span> charges.payment_method <span style="color:#66d9ef">IN</span> (<span style="color:#e6db74">&#39;debit_card&#39;</span>, <span style="color:#e6db74">&#39;subscription&#39;</span>, <span style="color:#e6db74">&#39;coupon&#39;</span>)
+
+<span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">6</span>
+</code></pre></div><p><code>Conftest</code>を実行します。ここでは<code>dataform</code>のプロジェクトは<code>example_project</code>ディレクトリにあり、regoで書かれたポリシーは<code>policy</code>ディレクトリにあるものとします。(<code>Conftest</code>はデフォルトで<code>policy</code>ディレクトリにあるファイルをテストの際に使用します。)
+ディレクトリ構造などはGitHubリポジトリを確認してください。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dataform compile example_project/ --json  | conftest test -
+WARN - - main - table definitions/order_stats.sqlx should has description
+WARN - - main - table definitions/order_stats.sqlx should have <span style="color:#e6db74">&#39;managed_by: dataform&#39;</span> label
+FAIL - - main - table definitions/order_stats.sqlx should have valid tag <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;daily&#34;</span>, <span style="color:#e6db74">&#34;hourly&#34;</span>, <span style="color:#e6db74">&#34;weekly&#34;</span><span style="color:#f92672">}</span>
+</code></pre></div><p>いくつかのテストが失敗しているので<code>SQLX</code>ファイルを修正します。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- order_stats.sqlx
+</span><span style="color:#75715e"></span>
+config <span style="color:#960050;background-color:#1e0010">{</span>
+  <span style="color:#66d9ef">type</span>: <span style="color:#e6db74">&#34;table&#34;</span>,
+  description: <span style="color:#e6db74">&#34;This table joins orders information from Shopify &amp; payment information from Stripe&#34;</span>,
+  tags: [<span style="color:#e6db74">&#34;example&#34;</span>,<span style="color:#e6db74">&#34;daily&#34;</span>],
+  bigquery: <span style="color:#960050;background-color:#1e0010">{</span>
+    labels: <span style="color:#960050;background-color:#1e0010">{</span>
+      <span style="color:#e6db74">&#34;hello&#34;</span>: <span style="color:#e6db74">&#34;world&#34;</span>,
+      <span style="color:#e6db74">&#34;managed_by&#34;</span> : <span style="color:#e6db74">&#34;dataform&#34;</span>
+    <span style="color:#960050;background-color:#1e0010">}</span>,
+  <span style="color:#960050;background-color:#1e0010">}</span>,
+<span style="color:#960050;background-color:#1e0010">}</span>
+
+<span style="color:#75715e">-- copy from https://docs.dataform.co/getting-started-tutorial/building-your-data-model
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span>
+  orders.date <span style="color:#66d9ef">AS</span> order_date,
+  orders.id <span style="color:#66d9ef">AS</span> id,
+  orders.customer_id <span style="color:#66d9ef">AS</span> customer_id,
+  orders.status <span style="color:#66d9ef">AS</span> order_status,
+  charges.status <span style="color:#66d9ef">AS</span> payment_status,
+  charges.payment_method <span style="color:#66d9ef">AS</span> payment_method,
+  <span style="color:#66d9ef">SUM</span>(orders.item_count) <span style="color:#66d9ef">AS</span> item_count,
+  <span style="color:#66d9ef">SUM</span>(charges.amount) <span style="color:#66d9ef">AS</span> amount
+
+<span style="color:#66d9ef">FROM</span>
+  dataform<span style="color:#f92672">-</span>demos.dataform_tutorial.shopify_orders <span style="color:#66d9ef">AS</span> orders
+  <span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">JOIN</span> dataform<span style="color:#f92672">-</span>demos.dataform_tutorial.stripe_payments <span style="color:#66d9ef">AS</span> charges
+    <span style="color:#66d9ef">ON</span> orders.payment_id <span style="color:#f92672">=</span> charges.id
+
+<span style="color:#66d9ef">WHERE</span>
+  orders.id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">999</span>
+  <span style="color:#66d9ef">AND</span> orders.item_count <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+  <span style="color:#66d9ef">AND</span> orders.status <span style="color:#f92672">&lt;&gt;</span> <span style="color:#e6db74">&#39;internal&#39;</span>
+  <span style="color:#66d9ef">AND</span> charges.payment_method <span style="color:#66d9ef">IN</span> (<span style="color:#e6db74">&#39;debit_card&#39;</span>, <span style="color:#e6db74">&#39;subscription&#39;</span>, <span style="color:#e6db74">&#39;coupon&#39;</span>)
+
+<span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">6</span>
+</code></pre></div><p>再度テストを実行します。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dataform compile example_project/ --json  | conftest test -
+
+<span style="color:#ae81ff">6</span> tests, <span style="color:#ae81ff">6</span> passed, <span style="color:#ae81ff">0</span> warnings, <span style="color:#ae81ff">0</span> failures, <span style="color:#ae81ff">0</span> exceptions
+</code></pre></div><p>無事すべてのテストを通すことができました。</p>
+<h2 id="終わり">終わり</h2>
+<p><code>Conftest</code>を使用して、<code>Dataform</code>のコンパイル結果をテストすることができました。
+<code>Rego</code>の練習も含んでいたのですがなかなか難しいですね。</p>
+<h2 id="今回使ったツールのバージョン">今回使ったツールのバージョン</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dataform --version
+1.17.2
+$ conftest --version
+Version: 0.22.0
+Commit: 07a60e7
+Date: 2020-11-14T09:21:01Z
+</code></pre></div><h2 id="今回のコード">今回のコード</h2>
+<p><a href="https://github.com/ri52dksla/dataform-conftest-example">https://github.com/ri52dksla/dataform-conftest-example</a></p>
+<p>テーブルを足したり、ポリシーを足したりしています。</p>
+
+    </div>
+  </section>
+</article>
+
+    </div>
+    
+    
+    
+  </body>
+</html>
