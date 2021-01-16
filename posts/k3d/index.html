@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content=""><title>k3dを使用したローカル環境でのKubernetes Clusterの構築 - ri52dksla blog</title>
+
+<meta property="og:url" content="https://blog.ri52dksla.dev/posts/k3d/"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="k3dを使用したローカル環境でのKubernetes Clusterの構築 - ri52dksla blog"/>
+<meta property="og:site_name" content="ri52dksla blog"/>
+<meta property="og:description" content=""/>
+<meta property="og:locale" content="ja_JP"/>
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@ri52dksla">
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-139351838-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+<link rel="stylesheet" href="/stylesheets/style.min.css" type="text/css">
+</head>
+  <body><div id="header">
+  <a href="/" id="header-name">ri52dksla blog</a>
+</div>
+
+    <div id="container">
+    
+<article id="post">
+  <header>
+    <div>
+      <h1 id="post-title">k3dを使用したローカル環境でのKubernetes Clusterの構築</h1>
+      <aside id="post-meta">
+        <div>
+        <time datetime="2020-02-09">2020-02-09</time>
+        </div>
+      </aside>
+    </div>  
+  </header>
+  <section id="post-content">
+    <div>
+      <p>ローカルでのKubernetes Clusterの構築ができるツールとして、<code>minikube</code>や<code>kind</code>などがあります。
+その中で<code>k3d</code>がClusterの立ち上げ早く便利だなと感じたので紹介します。</p>
+<p><a href="https://github.com/rancher/k3d">k3d</a>は<a href="https://k3s.io/">k3s</a>を使用してDocker上にKubernetes Clusterを構築するツールです。</p>
+<p>今回はMacでの構築を行います。</p>
+<h2 id="setup">Setup</h2>
+<ul>
+<li><a href="https://github.com/rancher/k3d">k3d</a>のインストール</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">brew install k3d
+</code></pre></div><p>brewでインストールしたくない場合には<a href="https://github.com/rancher/k3d#get">公式ドキュメント</a>を参照してください。</p>
+<h2 id="clusterの作成">Clusterの作成</h2>
+<p>今回は Worker Nodeが2つのClusterを作成します。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ k3d create --name example --workers <span style="color:#ae81ff">2</span> --publish 8081:80　<span style="color:#75715e"># k3s nodeのPort 80をHostに公開する</span>
+$ export KUBECONFIG<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>k3d get-kubeconfig --name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;example&#39;</span><span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span>
+
+$ kubectl get nodes
+NAME                   STATUS   ROLES    AGE   VERSION
+k3d-example-worker-1   Ready    &lt;none&gt;   11s   v1.16.3-k3s.2
+k3d-example-worker-0   Ready    &lt;none&gt;   10s   v1.16.3-k3s.2
+k3d-example-server     Ready    master   10s   v1.16.3-k3s.2
+
+$ kubectl cluster-info
+Kubernetes master is running at https://localhost:6443
+CoreDNS is running at https://localhost:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+Metrics-server is running at https://localhost:6443/api/v1/namespaces/kube-system/services/https:metrics-server:/proxy
+
+To further debug and diagnose cluster problems, use <span style="color:#e6db74">&#39;kubectl cluster-info dump&#39;</span>.
+
+$ kubectl get pods --all-namespaces
+NAMESPACE     NAME                                      READY   STATUS      RESTARTS   AGE
+kube-system   local-path-provisioner-58fb86bdfd-8ggz4   1/1     Running     <span style="color:#ae81ff">0</span>          4m16s
+kube-system   metrics-server-6d684c7b5-sstx2            1/1     Running     <span style="color:#ae81ff">0</span>          4m16s
+kube-system   coredns-d798c9dd-xtdpt                    1/1     Running     <span style="color:#ae81ff">0</span>          4m16s
+kube-system   helm-install-traefik-vstfk                0/1     Completed   <span style="color:#ae81ff">0</span>          4m16s
+kube-system   svclb-traefik-xf2jj                       3/3     Running     <span style="color:#ae81ff">0</span>          3m3s
+kube-system   svclb-traefik-phmbw                       3/3     Running     <span style="color:#ae81ff">0</span>          3m3s
+kube-system   svclb-traefik-67brq                       3/3     Running     <span style="color:#ae81ff">0</span>          3m3s
+kube-system   traefik-65bccdc4bd-2pvvq                  1/1     Running     <span style="color:#ae81ff">0</span>          3m3s
+</code></pre></div><h2 id="localのdocker-imageの取り込み">LocalのDocker Imageの取り込み</h2>
+<p>Docker HubにあるようなDocker Imageでは必要ありませんが、
+ローカルでビルドしたDocker Imageではこの作業が必要です。</p>
+<p>試しに簡単なDockerイメージをビルドし、それを取り込んでみようと思います。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ cat <span style="color:#e6db74">&lt;&lt;EOF &gt; Dockerfile
+</span><span style="color:#e6db74">FROM hashicorp/http-echo
+</span><span style="color:#e6db74">CMD [&#34;-text=\&#34;hello world\&#34;&#34;]
+</span><span style="color:#e6db74">EOF</span>
+
+$ export TARGET_DOCKER_IMAGE_TAG<span style="color:#f92672">=</span>hello-world:v0.0.1
+$ docker build --tag <span style="color:#e6db74">${</span>TARGET_DOCKER_IMAGE_TAG<span style="color:#e6db74">}</span> .
+
+$ k3d import-images --name example <span style="color:#e6db74">${</span>TARGET_DOCKER_IMAGE_TAG<span style="color:#e6db74">}</span>
+INFO<span style="color:#f92672">[</span>0000<span style="color:#f92672">]</span> Saving images <span style="color:#f92672">[</span>hello-world:v0.0.1<span style="color:#f92672">]</span> from local docker daemon...
+INFO<span style="color:#f92672">[</span>0001<span style="color:#f92672">]</span> Saved images to shared docker volume
+INFO<span style="color:#f92672">[</span>0001<span style="color:#f92672">]</span> Importing images <span style="color:#f92672">[</span>hello-world:v0.0.1<span style="color:#f92672">]</span> in container <span style="color:#f92672">[</span>k3d-example-server<span style="color:#f92672">]</span>
+INFO<span style="color:#f92672">[</span>0002<span style="color:#f92672">]</span> Importing images <span style="color:#f92672">[</span>hello-world:v0.0.1<span style="color:#f92672">]</span> in container <span style="color:#f92672">[</span>k3d-example-worker-1<span style="color:#f92672">]</span>
+INFO<span style="color:#f92672">[</span>0002<span style="color:#f92672">]</span> Importing images <span style="color:#f92672">[</span>hello-world:v0.0.1<span style="color:#f92672">]</span> in container <span style="color:#f92672">[</span>k3d-example-worker-0<span style="color:#f92672">]</span>
+INFO<span style="color:#f92672">[</span>0003<span style="color:#f92672">]</span> Successfully imported images <span style="color:#f92672">[</span>hello-world:v0.0.1<span style="color:#f92672">]</span> in all nodes of cluster <span style="color:#f92672">[</span>example<span style="color:#f92672">]</span>
+INFO<span style="color:#f92672">[</span>0003<span style="color:#f92672">]</span> Cleaning up tarball
+INFO<span style="color:#f92672">[</span>0003<span style="color:#f92672">]</span> Deleted tarball
+INFO<span style="color:#f92672">[</span>0003<span style="color:#f92672">]</span> ...Done
+</code></pre></div><h2 id="manifestの適用">manifestの適用</h2>
+<p>上で取り込んだDocker Imageを使ったDeploymentを作成します。
+またService, Ingressを作成することでホスト側からアクセスできるようにします。</p>
+<h3 id="deployment">Deployment</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cat <span style="color:#e6db74">&lt;&lt;EOF | kubectl apply -f -
+</span><span style="color:#e6db74">apiVersion: apps/v1
+</span><span style="color:#e6db74">kind: Deployment
+</span><span style="color:#e6db74">metadata:
+</span><span style="color:#e6db74">  name: hello-world
+</span><span style="color:#e6db74">  namespace: default
+</span><span style="color:#e6db74">spec:
+</span><span style="color:#e6db74">  selector:
+</span><span style="color:#e6db74">    matchLabels:
+</span><span style="color:#e6db74">      app.kubernetes.io/name: hello-world
+</span><span style="color:#e6db74">  replicas: 2
+</span><span style="color:#e6db74">  template:
+</span><span style="color:#e6db74">    metadata:
+</span><span style="color:#e6db74">      labels:
+</span><span style="color:#e6db74">        app.kubernetes.io/name: hello-world
+</span><span style="color:#e6db74">    spec:
+</span><span style="color:#e6db74">      containers:
+</span><span style="color:#e6db74">        - name: hello-world
+</span><span style="color:#e6db74">          image: hello-world:v0.0.1
+</span><span style="color:#e6db74">          imagePullPolicy: IfNotPresent
+</span><span style="color:#e6db74">          ports:
+</span><span style="color:#e6db74">            - name: http
+</span><span style="color:#e6db74">              containerPort: 5678
+</span><span style="color:#e6db74">              protocol: TCP
+</span><span style="color:#e6db74">          securityContext:
+</span><span style="color:#e6db74">            allowPrivilegeEscalation: false
+</span><span style="color:#e6db74">            readOnlyRootFilesystem: true
+</span><span style="color:#e6db74">      automountServiceAccountToken: false
+</span><span style="color:#e6db74">EOF</span>
+</code></pre></div><h3 id="service">Service</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cat <span style="color:#e6db74">&lt;&lt;EOF | kubectl apply -f -
+</span><span style="color:#e6db74">apiVersion: v1
+</span><span style="color:#e6db74">kind: Service
+</span><span style="color:#e6db74">metadata:
+</span><span style="color:#e6db74">  name: hello-world-service
+</span><span style="color:#e6db74">  namespace: default
+</span><span style="color:#e6db74">spec:
+</span><span style="color:#e6db74">  selector:
+</span><span style="color:#e6db74">    app.kubernetes.io/name: hello-world
+</span><span style="color:#e6db74">  ports:
+</span><span style="color:#e6db74">    - name: http
+</span><span style="color:#e6db74">      protocol: TCP
+</span><span style="color:#e6db74">      port: 80
+</span><span style="color:#e6db74">      targetPort: http
+</span><span style="color:#e6db74">EOF</span>
+</code></pre></div><h3 id="ingress">Ingress</h3>
+<p>ここで指定している<code>servicePort</code>の<code>80</code>はホストのポート番号<code>8081</code>にマッピングされます。(Clusterの作成時に<code>publish</code>フラグで指定した値)</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cat <span style="color:#e6db74">&lt;&lt;EOF | kubectl apply -f -
+</span><span style="color:#e6db74">apiVersion: extensions/v1beta1
+</span><span style="color:#e6db74">kind: Ingress
+</span><span style="color:#e6db74">metadata:
+</span><span style="color:#e6db74">  name: hello-world-ingress
+</span><span style="color:#e6db74">  namespace: default
+</span><span style="color:#e6db74">  annotations:
+</span><span style="color:#e6db74">    ingress.kubernetes.io/ssl-redirect: &#34;false&#34;
+</span><span style="color:#e6db74">spec:
+</span><span style="color:#e6db74">  rules:
+</span><span style="color:#e6db74">    - http:
+</span><span style="color:#e6db74">        paths:
+</span><span style="color:#e6db74">          - path: /
+</span><span style="color:#e6db74">            backend:
+</span><span style="color:#e6db74">              serviceName: hello-world-service
+</span><span style="color:#e6db74">              servicePort: 80
+</span><span style="color:#e6db74">EOF</span>
+</code></pre></div><h2 id="動作の確認">動作の確認</h2>
+<p><code>http://localhost:8081</code>からアクセスできることが確認できます。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ curl http://localhost:8081 -v
+* Rebuilt URL to: http://localhost:8081/
+*   Trying ::1...
+* TCP_NODELAY set
+* Connected to localhost <span style="color:#f92672">(</span>::1<span style="color:#f92672">)</span> port <span style="color:#ae81ff">8081</span> <span style="color:#f92672">(</span><span style="color:#75715e">#0)</span>
+&gt; GET / HTTP/1.1
+&gt; Host: localhost:8081
+&gt; User-Agent: curl/7.53.1
+&gt; Accept: */*
+&gt;
+&lt; HTTP/1.1 <span style="color:#ae81ff">200</span> OK
+&lt; Content-Length: <span style="color:#ae81ff">14</span>
+&lt; Content-Type: text/plain; charset<span style="color:#f92672">=</span>utf-8
+&lt; Date: Sun, <span style="color:#ae81ff">09</span> Feb <span style="color:#ae81ff">2020</span> 14:29:53 GMT
+&lt; Vary: Accept-Encoding
+&lt; X-App-Name: http-echo
+&lt; X-App-Version: 0.2.3
+&lt;
+<span style="color:#e6db74">&#34;hello world&#34;</span>
+* Connection <span style="color:#75715e">#0 to host localhost left intact</span>
+</code></pre></div><h2 id="clusterの削除">Clusterの削除</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ k3d delete --name example
+INFO<span style="color:#f92672">[</span>0000<span style="color:#f92672">]</span> Removing cluster <span style="color:#f92672">[</span>example<span style="color:#f92672">]</span>
+INFO<span style="color:#f92672">[</span>0000<span style="color:#f92672">]</span> ...Removing <span style="color:#ae81ff">2</span> workers
+INFO<span style="color:#f92672">[</span>0001<span style="color:#f92672">]</span> ...Removing server
+INFO<span style="color:#f92672">[</span>0002<span style="color:#f92672">]</span> ...Removing docker image volume
+INFO<span style="color:#f92672">[</span>0002<span style="color:#f92672">]</span> Removed cluster <span style="color:#f92672">[</span>example<span style="color:#f92672">]</span>
+</code></pre></div>
+    </div>
+  </section>
+</article>
+
+    </div>
+    
+    
+    
+  </body>
+</html>

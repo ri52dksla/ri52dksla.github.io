@@ -33,6 +33,41 @@
   </url>
   
   <url>
+    <loc>https://blog.ri52dksla.dev/posts/dynamodb_local_docker_compose/</loc>
+    <lastmod>2020-05-09T10:10:01+09:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.ri52dksla.dev/posts/manifest_validation_kubeval/</loc>
+    <lastmod>2020-04-23T20:06:28+09:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.ri52dksla.dev/posts/local_https_nginx_proxy_mkcert/</loc>
+    <lastmod>2020-02-16T12:26:27+09:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.ri52dksla.dev/posts/kind/</loc>
+    <lastmod>2020-02-15T17:26:37+09:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.ri52dksla.dev/posts/k3d/</loc>
+    <lastmod>2020-02-09T22:30:00+09:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.ri52dksla.dev/posts/minio-docker-compose/</loc>
+    <lastmod>2019-11-10T12:44:32+09:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.ri52dksla.dev/posts/ec2-root-device-volume-size/</loc>
+    <lastmod>2019-11-01T20:07:42+09:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://blog.ri52dksla.dev/categories/</loc>
   </url>
   
