@@ -6,7 +6,26 @@
     <description>Recent content on ri52dksla blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>ja-jp</language>
-    <lastBuildDate>Sun, 10 Jan 2021 12:30:03 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 16 Jan 2021 10:12:17 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Docker Official Imagesのphp-fpmが含まれるphpのイメージが読み込んでいるphp-fpmの設定ファイルの場所</title>
+      <link>https://blog.ri52dksla.dev/posts/docker-php-fpm-config-location/</link>
+      <pubDate>Sat, 16 Jan 2021 10:12:17 +0900</pubDate>
+      
+      <guid>https://blog.ri52dksla.dev/posts/docker-php-fpm-config-location/</guid>
+      <description>最近ちょっとした事情でPHPを触っています。PHPは殆ど使ったことがないので疑問に思ったことを調べたのでメモしておきます。
+Docker Official Imagesにphpのイメージがあります。 そのイメージのうちにphp-fpmが含まれているものがあります。 例えばphp:7.4.14-fpm-busterや7.4.14-fpm-alpine3.13がそれです。
+PHPのドキュメントでphp-fpmについて書かれているページや、イメージのphp-fpmの 項目を見てもどこの設定ファイルが読み込まれるのか書かれていなかったので調べてみることにしました。
+また、なぜそのファイルが読み込まれるのかを調べてみました。(こちらは正しいのか自信はありません)。
+今回対象とするイメージはphp:7.4.14-fpm-busterとします。
+調べた結果 php:7.4.14-fpm-busterのイメージでコンテナを立ち上げて、内部でphp-fpm --testコマンドを実行しました。
+それによって/usr/local/etc/php-fpm.confファイルがphp-fpmで読み込まれることがわかりました。
+$ docker container run --name php-fpm-test --detach php:7.4.14-fpm-buster b6ce6159ca615a04a5cb9f4fe3aba03fea276f8b60062675cf4b78f8de624b52 $ docker exec -it b6ce6159ca615a04a5cb9f4fe3aba03fea276f8b60062675cf4b78f8de624b52 /bin/bash # コンテナ内で実行 root@b6ce6159ca61:/var/www/html# php-fpm --test [16-Jan-2021 02:01:38] NOTICE: configuration file /usr/local/etc/php-fpm.conf test is successful 調べた結果の設定ファイルを読み込むための設定はどうなっているのか これでphp:7.4.14-fpm-busterのイメージではphp-fpmは/usr/local/etc/php-fpm.confファイルを読み込んでいることがわかりました。
+ただphp-fpmがどういった設定でこのファイルを読み込むようになっているのかがわかりません。
+php-fpm -iコマンドで情報を表示してもどこにも/usr/local/etc/php-fpm.confから読み込むといった設定は書かれていませんでした。
+root@b6ce6159ca61:/var/www/html# php-fpm -i phpinfo() PHP Version =&amp;gt; 7.4.14 System =&amp;gt; Linux b6ce6159ca61 5.4.39-linuxkit #1 SMP Fri May 8 23:03:06 UTC 2020 x86_64 Build Date =&amp;gt; Jan 12 2021 02:24:44 Configure Command =&amp;gt; &amp;#39;.</description>
+    </item>
+    
     <item>
       <title>Dataformでmultiline stringを使いたい</title>
       <link>https://blog.ri52dksla.dev/posts/dataform-multiline-string/</link>
