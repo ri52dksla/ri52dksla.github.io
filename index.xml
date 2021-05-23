@@ -6,7 +6,18 @@
     <description>Recent content on ri52dksla blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>ja-jp</language>
-    <lastBuildDate>Sat, 16 Jan 2021 10:12:17 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 23 May 2021 09:40:15 +0900</lastBuildDate><atom:link href="https://blog.ri52dksla.dev/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>AWS App RunnerをTerraformで</title>
+      <link>https://blog.ri52dksla.dev/posts/apprunner-terraform/</link>
+      <pubDate>Sun, 23 May 2021 09:40:15 +0900</pubDate>
+      
+      <guid>https://blog.ri52dksla.dev/posts/apprunner-terraform/</guid>
+      <description>AWS App Runnerがリリースされましたね。 さっそくTerraformでサポートされているようなので試してみます。
+このgistに書いたものとほとんど同じです。
+ECR Public image を使用する場合 resource &amp;#34;aws_apprunner_service&amp;#34; &amp;#34;apprunner_example&amp;#34; { service_name = &amp;#34;apprunner_example&amp;#34; source_configuration { image_repository { image_configuration { port = &amp;#34;80&amp;#34; } image_identifier = &amp;#34;public.ecr.aws/nginx/nginx:1.19.10&amp;#34; image_repository_type = &amp;#34;ECR_PUBLIC&amp;#34; } auto_deployments_enabled = false } auto_scaling_configuration_arn = aws_apprunner_auto_scaling_configuration_version.apprunner_example.arn health_check_configuration { healthy_threshold = 5 interval = 5 protocol = &amp;#34;TCP&amp;#34; timeout = 1 unhealthy_threshold = 10 } tags = { managed_by=&amp;#34;terraform&amp;#34; } }# 試しにAuto scalingの設定も作成し、それをApp Runner Serviceに付与したが、指定しない場合にはデフォルトのscalingの設定が使用されます。 # &amp;gt; If you don&amp;#39;t provide one, App Runner provides a default auto scaling configuration with recommended values.</description>
+    </item>
+    
     <item>
       <title>Docker Official Imagesのphp-fpmが含まれるphpのイメージが読み込んでいるphp-fpmの設定ファイルの場所</title>
       <link>https://blog.ri52dksla.dev/posts/docker-php-fpm-config-location/</link>

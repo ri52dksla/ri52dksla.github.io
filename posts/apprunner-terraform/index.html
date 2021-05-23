@@ -1,0 +1,270 @@
+
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content=""><title>AWS App RunnerをTerraformで - ri52dksla blog</title>
+
+<meta property="og:url" content="https://blog.ri52dksla.dev/posts/apprunner-terraform/"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="AWS App RunnerをTerraformで - ri52dksla blog"/>
+<meta property="og:site_name" content="ri52dksla blog"/>
+<meta property="og:description" content=""/>
+<meta property="og:locale" content="ja_JP"/>
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@ri52dksla">
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-139351838-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+<link rel="stylesheet" href="/stylesheets/style.min.css" type="text/css">
+</head>
+  <body><div id="header">
+  <a href="/" id="header-name">ri52dksla blog</a>
+</div>
+
+    <div id="container">
+    
+<article id="post">
+  <header>
+    <div>
+      <h1 id="post-title">AWS App RunnerをTerraformで</h1>
+      <aside id="post-meta">
+        <div>
+        <time datetime="2021-05-23">2021-05-23</time>
+        </div>
+      </aside>
+    </div>  
+  </header>
+  <section id="post-content">
+    <div>
+      <p>AWS App Runnerが<a href="https://aws.amazon.com/about-aws/whats-new/2021/05/aws-announces-aws-app-runner/">リリース</a>されましたね。
+さっそくTerraformで<a href="https://www.hashicorp.com/blog/announcing-launch-day-support-for-aws-app-runner-in-the-terraform-aws-provider">サポート</a>されているようなので試してみます。</p>
+<p>この<a href="https://gist.github.com/ri52dksla/b0e16a14d7a17374e5a5a7d2566e3c73">gist</a>に書いたものとほとんど同じです。</p>
+<h2 id="ecr-public-image-を使用する場合">ECR Public image を使用する場合</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-terraform" data-lang="terraform"><span style="color:#66d9ef">resource</span> <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example&#34;</span> {
+  <span style="color:#a6e22e">service_name</span> = <span style="color:#e6db74">&#34;apprunner_example&#34;</span>
+
+  <span style="color:#a6e22e">source_configuration</span> {
+
+    <span style="color:#a6e22e">image_repository</span> {
+      <span style="color:#a6e22e">image_configuration</span> {
+        <span style="color:#a6e22e">port</span> = <span style="color:#e6db74">&#34;80&#34;</span>
+      }
+      <span style="color:#a6e22e">image_identifier</span>      = <span style="color:#e6db74">&#34;public.ecr.aws/nginx/nginx:1.19.10&#34;</span>
+      <span style="color:#a6e22e">image_repository_type</span> = <span style="color:#e6db74">&#34;ECR_PUBLIC&#34;</span>
+    }
+    <span style="color:#a6e22e">auto_deployments_enabled</span> = <span style="color:#66d9ef">false</span>
+  }
+  <span style="color:#a6e22e">auto_scaling_configuration_arn</span> = <span style="color:#a6e22e">aws_apprunner_auto_scaling_configuration_version</span>.<span style="color:#a6e22e">apprunner_example</span>.<span style="color:#a6e22e">arn</span>
+  <span style="color:#a6e22e">health_check_configuration</span> {
+    <span style="color:#a6e22e">healthy_threshold</span>   = <span style="color:#ae81ff">5</span>
+    <span style="color:#a6e22e">interval</span>            = <span style="color:#ae81ff">5</span>
+    <span style="color:#a6e22e">protocol</span>            = <span style="color:#e6db74">&#34;TCP&#34;</span>
+    <span style="color:#a6e22e">timeout</span>             = <span style="color:#ae81ff">1</span>
+    <span style="color:#a6e22e">unhealthy_threshold</span> = <span style="color:#ae81ff">10</span>
+  }
+  <span style="color:#a6e22e">tags</span> = {
+      <span style="color:#a6e22e">managed_by</span>=<span style="color:#e6db74">&#34;terraform&#34;</span>
+  }
+}<span style="color:#75715e">
+</span><span style="color:#75715e">
+</span><span style="color:#75715e"># 試しにAuto scalingの設定も作成し、それをApp Runner Serviceに付与したが、指定しない場合にはデフォルトのscalingの設定が使用されます。
+</span><span style="color:#75715e"># &gt; If you don&#39;t provide one, App Runner provides a default auto scaling configuration with recommended values.
+</span><span style="color:#75715e"># https://docs.aws.amazon.com/apprunner/latest/dg/manage-autoscaling.html
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">resource</span> <span style="color:#e6db74">&#34;aws_apprunner_auto_scaling_configuration_version&#34;</span> <span style="color:#e6db74">&#34;apprunner_example&#34;</span> {
+
+  <span style="color:#a6e22e">auto_scaling_configuration_name</span> = <span style="color:#e6db74">&#34;apprunner_example&#34;</span>
+
+  <span style="color:#a6e22e">max_concurrency</span> = <span style="color:#ae81ff">10</span>
+  <span style="color:#a6e22e">max_size</span>        = <span style="color:#ae81ff">10</span>
+  <span style="color:#a6e22e">min_size</span>        = <span style="color:#ae81ff">1</span>
+}
+</code></pre></div><p>Amazon ECR Public imageではautomatic deploymentはサポートされていないようです。</p>
+<blockquote>
+<p>App Runner doesn&rsquo;t support automatic deployment for Amazon ECR Public images.
+<a href="https://docs.aws.amazon.com/apprunner/latest/dg/service-source-image.html#service-source-image.providers.ecrpublic">https://docs.aws.amazon.com/apprunner/latest/dg/service-source-image.html#service-source-image.providers.ecrpublic</a></p>
+</blockquote>
+<p>そのため、App RunnerでECR Public imageを使用する場合にはデフォルトでは<code>true</code>になっている<code>source_configuration.auto_deployments_enabled</code>は<code>false</code>にします。
+(aws providerの<a href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apprunner_service">aws_apprunner_service</a>のExample Usageを見るとECR Public imageで上記の設定をしなくても動くような感じなので引っかかった。)</p>
+<p>Terraformのapplyのログからは<code>source_configuration.auto_deployments_enabled</code>を<code>true</code>にして適用した場合、App Runner Serviceの作成に失敗したログからは何が原因かよくわかりません。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">Error: error waiting <span style="color:#66d9ef">for</span> App Runner Service <span style="color:#f92672">(</span>arn:aws:apprunner:ap-northeast-1:<span style="color:#e6db74">${</span>aws_account_id<span style="color:#e6db74">}</span>:service/apprunner_example/<span style="color:#e6db74">${</span>app_runner_service_id<span style="color:#e6db74">}</span><span style="color:#f92672">)</span> creation: unexpected state <span style="color:#e6db74">&#39;CREATE_FAILED&#39;</span>, wanted target <span style="color:#e6db74">&#39;RUNNING&#39;</span>. last error: %!s<span style="color:#f92672">(</span>&lt;nil&gt;<span style="color:#f92672">)</span>
+
+  on main.tf line 161, in resource <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example&#34;</span>:
+ 161: resource <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example&#34;</span> <span style="color:#f92672">{</span>
+</code></pre></div><p>App Runner Serviceが CloudWatch Logsに書き込む<a href="https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/monitor-cwl.html#monitor-cwl.streams.service">Service Log</a>を確認するとAutomatic Deploymentの設定に失敗していることがわかります。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-text" data-lang="text">05-22-2021 10:35 AM [AppRunner] Failed to create pipeline for automatic deployments.
+05-22-2021 10:35 AM [AppRunner] Service status is set to OPERATION_IN_PROGRESS.
+05-22-2021 10:35 AM [AppRunner] Service creation started.
+</code></pre></div><h2 id="amazon-ecr-を使用する場合">Amazon ECR を使用する場合</h2>
+<p>まず<a href="https://docs.aws.amazon.com/ja_jp/AmazonECR/latest/userguide/docker-push-ecr-image.html">https://docs.aws.amazon.com/ja_jp/AmazonECR/latest/userguide/docker-push-ecr-image.html</a> 等を参考にECRへイメージをプッシュしておきます。</p>
+<p>ここでは、apprunner_example というECR repositoryを作成する。
+そして、public.ecr.aws/nginx/nginx:1.19.10 のイメージに作成したECR repositoryへプッシュするようのタグをつけてECRへイメージをプッシュします。
+イメージをプッシュする前に<a href="https://docs.aws.amazon.com/ja_jp/AmazonECR/latest/userguide/registry_auth.html">認証</a>を通す必要があります。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker image pull public.ecr.aws/nginx/nginx:1.19.10
+docker image tag public.ecr.aws/nginx/nginx:1.19.10 <span style="color:#e6db74">${</span>aws_account_id<span style="color:#e6db74">}</span>.dkr.ecr.<span style="color:#e6db74">${</span>region<span style="color:#e6db74">}</span>.amazonaws.com/apprunner_example:v0.0.1
+docker image push <span style="color:#e6db74">${</span>aws_account_id<span style="color:#e6db74">}</span>.dkr.ecr.<span style="color:#e6db74">${</span>region<span style="color:#e6db74">}</span>.amazonaws.com/apprunner_example:v0.0.1
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-terraform" data-lang="terraform"><span style="color:#75715e">
+</span><span style="color:#75715e"># IAM Policy for Access role
+</span><span style="color:#75715e"># AWSAppRunnerServicePolicyForECRAccess  managed policyを使っても良さそう。
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">resource</span> <span style="color:#e6db74">&#34;aws_iam_policy&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_access_role_policy&#34;</span> {
+  <span style="color:#a6e22e">name</span> = <span style="color:#e6db74">&#34;apprunner_example_access_role_policy&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e">  # https://docs.aws.amazon.com/apprunner/latest/dg/security_iam_service-with-iam.html#security_iam_service-with-iam-roles-service.access
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">policy</span> = jsonencode({
+    <span style="color:#a6e22e">Version</span> = <span style="color:#e6db74">&#34;2012-10-17&#34;</span>
+    <span style="color:#a6e22e">Statement</span> = [
+      {
+        <span style="color:#a6e22e">Action</span> = [
+          <span style="color:#e6db74">&#34;ecr:GetDownloadUrlForLayer&#34;</span>,
+          <span style="color:#e6db74">&#34;ecr:BatchCheckLayerAvailability&#34;</span>,
+          <span style="color:#e6db74">&#34;ecr:BatchGetImage&#34;</span>,
+          <span style="color:#e6db74">&#34;ecr:DescribeImages&#34;</span>
+        ]
+        <span style="color:#a6e22e">Effect</span> = <span style="color:#e6db74">&#34;Allow&#34;</span>
+        <span style="color:#a6e22e">Resource</span> = [
+            <span style="color:#e6db74">&#34;*&#34;</span>
+        ]
+      },
+      {
+        <span style="color:#a6e22e">Action</span> = [
+          <span style="color:#e6db74">&#34;ecr:GetAuthorizationToken&#34;</span>,
+        ]
+        <span style="color:#a6e22e">Effect</span>   = <span style="color:#e6db74">&#34;Allow&#34;</span>
+        <span style="color:#a6e22e">Resource</span> = <span style="color:#e6db74">&#34;*&#34;</span>
+      },
+    ]
+  })
+}<span style="color:#75715e">
+</span><span style="color:#75715e">
+</span><span style="color:#75715e"># 作成したIAM Policyではなく、AWSAppRunnerServicePolicyForECRAccess  managed policyを使っても良さそう。
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">resource</span> <span style="color:#e6db74">&#34;aws_iam_role_policy_attachment&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_access_role&#34;</span> {
+  <span style="color:#a6e22e">role</span>       = <span style="color:#a6e22e">aws_iam_role</span>.<span style="color:#a6e22e">apprunner_example_access_role</span>.<span style="color:#a6e22e">name</span>
+  <span style="color:#a6e22e">policy_arn</span> = <span style="color:#a6e22e">aws_iam_policy</span>.<span style="color:#a6e22e">apprunner_example_access_role_policy</span>.<span style="color:#a6e22e">arn</span>
+}
+<span style="color:#66d9ef">
+</span><span style="color:#66d9ef">data</span> <span style="color:#e6db74">&#34;aws_ecr_repository&#34;</span> <span style="color:#e6db74">&#34;apprunner_example&#34;</span> {
+  <span style="color:#a6e22e">name</span> = <span style="color:#e6db74">&#34;apprunner_example&#34;</span>
+}
+<span style="color:#66d9ef">
+</span><span style="color:#66d9ef">resource</span> <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example&#34;</span> {
+  <span style="color:#a6e22e">service_name</span> = <span style="color:#e6db74">&#34;apprunner_example&#34;</span>
+
+  <span style="color:#a6e22e">source_configuration</span> {
+
+    <span style="color:#a6e22e">authentication_configuration</span> {
+      <span style="color:#a6e22e">access_role_arn</span> = <span style="color:#a6e22e">aws_iam_role</span>.<span style="color:#a6e22e">apprunner_example_access_role</span>.<span style="color:#a6e22e">arn</span>
+    }
+
+    <span style="color:#a6e22e">image_repository</span> {
+      <span style="color:#a6e22e">image_configuration</span> {
+        <span style="color:#a6e22e">port</span> = <span style="color:#e6db74">&#34;80&#34;</span>
+      }
+      <span style="color:#a6e22e">image_identifier</span>      = format(<span style="color:#e6db74">&#34;%s:%s&#34;</span>,data.<span style="color:#a6e22e">aws_ecr_repository</span>.<span style="color:#a6e22e">apprunner_example</span>.<span style="color:#a6e22e">repository_url</span>,<span style="color:#e6db74">&#34;v0.0.1&#34;</span>)
+      <span style="color:#a6e22e">image_repository_type</span> = <span style="color:#e6db74">&#34;ECR&#34;</span>
+    }
+    <span style="color:#a6e22e">auto_deployments_enabled</span> = <span style="color:#66d9ef">false</span>
+  }
+  <span style="color:#a6e22e">tags</span> = {
+      <span style="color:#a6e22e">managed_by</span>=<span style="color:#e6db74">&#34;terraform&#34;</span>
+  }
+}
+</code></pre></div><p>App RunnerでAmazon ECRのイメージを動かすためには<a href="https://docs.aws.amazon.com/apprunner/latest/dg/security_iam_service-with-iam.html#security_iam_service-with-iam-roles%23security_iam_service-with-iam-roles-service.access">access role</a>をApp Runner Serviceに指定する必要があります。
+上のTerraformでは、IAM Policyを作成したが、<code>AWSAppRunnerServicePolicyForECRAccess</code>というmanaged policyが存在するのでそちらを使っても良いかもしれないです。</p>
+<h2 id="その他">その他</h2>
+<h3 id="cloudwatch-log-group">CloudWatch Log Group</h3>
+<p>App RunnerはApp Runner Serviceが作成されるとそれに合わせてService logs, Application logs用のCloudWatch Log Groupを作成する。
+それぞれの命名規則は<code>/aws/apprunner/service-name/service-id/service</code>, <code>/aws/apprunner/service-name/service-id/application</code>。service-nameは自分で決められるが、service-idの値はApp Runner側で決められるようなので、CloudWatch Log GroupをTerraformで管理することは難しそう。(もちろん<code>terraform import</code>を行えばTerraformで管理するようにはできるが)
+ログの保持期間を指定したり、タグを付与したりするときが少し面倒だなと感じた。</p>
+<h3 id="バグっぽい挙動">バグっぽい挙動</h3>
+<p>ECR Public imageでautomatic deploymentを間違えて有効にしてTerraformを適用したときに遭遇した。</p>
+<p>ECR Public imageでApp Runner Serviceを作成し、</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-terraform" data-lang="terraform"><span style="color:#66d9ef">resource</span> <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span> {
+  <span style="color:#a6e22e">service_name</span> = <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span>
+  <span style="color:#a6e22e">source_configuration</span> {
+    <span style="color:#a6e22e">image_repository</span> {
+      <span style="color:#a6e22e">image_configuration</span> {
+        <span style="color:#a6e22e">port</span> = <span style="color:#e6db74">&#34;80&#34;</span>
+      }
+      <span style="color:#a6e22e">image_identifier</span>      = <span style="color:#e6db74">&#34;public.ecr.aws/nginx/nginx:1.19.10&#34;</span>
+      <span style="color:#a6e22e">image_repository_type</span> = <span style="color:#e6db74">&#34;ECR_PUBLIC&#34;</span>
+    }
+    <span style="color:#a6e22e">auto_deployments_enabled</span> = <span style="color:#66d9ef">false</span>
+  }
+}
+</code></pre></div><p>その後 <code>auto_deployment_enabled</code>を<code>true</code>にして適用する(本来はECR Public imageではautomatic deploymentはサポートされていない)</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-terraform" data-lang="terraform"><span style="color:#66d9ef">resource</span> <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span> {
+  <span style="color:#a6e22e">service_name</span> = <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span>
+  <span style="color:#a6e22e">source_configuration</span> {
+    <span style="color:#a6e22e">image_repository</span> {
+      <span style="color:#a6e22e">image_configuration</span> {
+        <span style="color:#a6e22e">port</span> = <span style="color:#e6db74">&#34;80&#34;</span>
+      }
+      <span style="color:#a6e22e">image_identifier</span>      = <span style="color:#e6db74">&#34;public.ecr.aws/nginx/nginx:1.19.10&#34;</span>
+      <span style="color:#a6e22e">image_repository_type</span> = <span style="color:#e6db74">&#34;ECR_PUBLIC&#34;</span>
+    }
+    <span style="color:#a6e22e">auto_deployments_enabled</span> = <span style="color:#66d9ef">false</span>
+  }
+}
+</code></pre></div><p>Terraformを適用してしばらくするとタイムアウトになる。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">Error: error waiting <span style="color:#66d9ef">for</span> App Runner Service <span style="color:#f92672">(</span>arn:aws:apprunner:ap-northeast-1:<span style="color:#e6db74">${</span>aws_account_id<span style="color:#e6db74">}</span>:service/apprunner_example_bug/<span style="color:#e6db74">${</span>service_id<span style="color:#e6db74">}</span><span style="color:#f92672">)</span> to update: timeout <span style="color:#66d9ef">while</span> waiting <span style="color:#66d9ef">for</span> state to become <span style="color:#e6db74">&#39;RUNNING&#39;</span> <span style="color:#f92672">(</span>last state: <span style="color:#e6db74">&#39;OPERATION_IN_PROGRESS&#39;</span>, timeout: 20m0s<span style="color:#f92672">)</span>
+
+  on main.tf line 224, in resource <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span>:
+ 224: resource <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span> <span style="color:#f92672">{</span>
+</code></pre></div><p>その後App Runner Serviceの削除や更新がTerraform, AWS Consoleどちらでもできなくなる。</p>
+<p>Terraform上で変更ができないログ</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">Error: error updating App Runner Service <span style="color:#f92672">(</span>arn:aws:apprunner:ap-northeast-1:<span style="color:#e6db74">${</span>aws_account_id<span style="color:#e6db74">}</span>:service/apprunner_example_bug/<span style="color:#e6db74">${</span>service_id<span style="color:#e6db74">}</span><span style="color:#f92672">)</span>: InvalidStateException: Service cannot be updated in the current state: OPERATION_IN_PROGRESS.
+
+  on main.tf line 224, in resource <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span>:
+ 224: resource <span style="color:#e6db74">&#34;aws_apprunner_service&#34;</span> <span style="color:#e6db74">&#34;apprunner_example_bug&#34;</span> <span style="color:#f92672">{</span>
+</code></pre></div><p>Terraform上で削除ができないログ</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">Error: error deleting App Runner Service <span style="color:#f92672">(</span>arn:aws:apprunner:ap-northeast-1:<span style="color:#e6db74">${</span>aws_account_id<span style="color:#e6db74">}</span>:service/apprunner_example_bug/<span style="color:#e6db74">${</span>service_id<span style="color:#e6db74">}</span><span style="color:#f92672">)</span>: InvalidStateException: Service cannot be deleted in the current state: OPERATION_IN_PROGRESS.
+</code></pre></div><p>AWS CosoleでApp RunnerのActivityの項目を見ると以下のようになっている。</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Status</th>
+<th>Started</th>
+<th>Ended</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Update service</td>
+<td>Rollback in progress</td>
+<td>5/22/2021, 2:34:50 AM UTC</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Create service</td>
+<td>Succeeded</td>
+<td>5/22/2021, 2:16:31 AM UTC</td>
+<td>5/22/2021, 2:20:14 AM UTC</td>
+</tr>
+</tbody>
+</table>
+<p>Statusの項目は<code>Operation in progress</code>となっている。</p>
+<p>もしかしたら本当に実行中のままかもしれないので、しばらく放置しておいて様子を見ることにする。</p>
+<p>AWS Consoleでとったスクリーンショット</p>
+<p><img src="./images/overview.png" alt="Overview"></p>
+<p><img src="./images/activity.png" alt="Activity"></p>
+
+    </div>
+  </section>
+</article>
+
+    </div>
+    
+    
+    
+  </body>
+</html>
