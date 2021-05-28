@@ -211,7 +211,7 @@ docker image push <span style="color:#e6db74">${</span>aws_account_id<span style
       <span style="color:#a6e22e">image_identifier</span>      = <span style="color:#e6db74">&#34;public.ecr.aws/nginx/nginx:1.19.10&#34;</span>
       <span style="color:#a6e22e">image_repository_type</span> = <span style="color:#e6db74">&#34;ECR_PUBLIC&#34;</span>
     }
-    <span style="color:#a6e22e">auto_deployments_enabled</span> = <span style="color:#66d9ef">false</span>
+    <span style="color:#a6e22e">auto_deployments_enabled</span> = <span style="color:#66d9ef">true</span>
   }
 }
 </code></pre></div><p>Terraformを適用してしばらくするとタイムアウトになる。</p>
